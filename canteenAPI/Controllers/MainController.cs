@@ -29,7 +29,6 @@ namespace canteenAPI.Controllers
         {
             var result = (from user in _context.Users
                           where user.Email == email && user.Password == password
-                          //join role in _context.Roles on user.RoleId equals role.RoleId
                           select new UserView()
                           {
                               UserId = user.UserId,
@@ -40,12 +39,6 @@ namespace canteenAPI.Controllers
                               Password = user.Password,
                               Role = user.Role.Name
                           }).FirstOrDefault();
-
-            /*if (result.Count == 0)
-            {
-                return NotFound();
-            }*/
-
             return new ObjectResult(result);
         }
 
@@ -92,33 +85,67 @@ namespace canteenAPI.Controllers
         }
 
         /// <summary>
-        /// Вывод зданий
+        /// Вывод всех товаров
         /// </summary>
         [Route("[action]")]
         [HttpGet]
-        public IEnumerable<object> GetBuildings()
+        public IEnumerable<object> GetAvaibilities(int categoryID, int buildingID)
         {
-            var result = (from Building in _context.Buildings
+            var result = (from Avaibility in _context.Avaibilities
+                          where Avaibility.Product.CategoryId == categoryID && Avaibility.BuildingId == buildingID
                           select new
                           {
-                              Name = Building.Name
+                              Count = Avaibility.Count,
+                              Name = Avaibility.Product.Name,
+                              Cost = Avaibility.Product.Cost,
+                              Image = Avaibility.Product.Image
                           }).ToList();
             return result;
         }
 
         /// <summary>
-        /// Вывод Категорий товаров
+        /// Вывод списка товаров в одном заказе
         /// </summary>
         [Route("[action]")]
         [HttpGet]
-        public IEnumerable<object> GetCategories()
+        public IEnumerable<object> GetOrder(int orderID)
         {
-            var result = (from Category in _context.Categories
+            var result = (from OrderList in _context.OrderLists
+                          where OrderList.OrderId == orderID
                           select new
                           {
-                              Name = Category.Name
+                              Name = OrderList.Avaibility.Product.Name,
+                              Cost = OrderList.Avaibility.Product.Cost,
+                              Count = OrderList.Count
                           }).ToList();
             return result;
+        }
+
+        [HttpPost]
+        [Route("[action]")]
+        public ActionResult<OrderView> NewOrder(OrderView _order)
+        {
+            Order order = new Order()
+            {
+                UserId = _order.UserId,
+                Cost = _order.Cost,
+                PayStatus = _order.PayStatus,
+                OrderStatus = _order.OrderStatus
+            };
+            _context.Orders.Add(order);
+            _context.SaveChanges();
+            foreach (var i in _order.Avaibility)
+            {
+                OrderList orderList = new OrderList()
+                {
+                    Count = i.Count,
+                    AvaibilityId = i.AvaibilityId,
+                    Order = order
+                };
+                _context.OrderLists.Add(orderList);
+            }
+            _context.SaveChanges();
+            return _order;
         }
 
         /// <summary>
@@ -154,7 +181,5 @@ namespace canteenAPI.Controllers
                           }).ToList();
             return result;
         }
-
-        
     }
 }
